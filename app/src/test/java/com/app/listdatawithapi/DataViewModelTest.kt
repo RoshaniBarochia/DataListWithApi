@@ -4,9 +4,11 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.Observer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
@@ -29,7 +31,8 @@ class DataViewModelTest {
     var mockitoRule: MockitoRule = MockitoJUnit.rule()
 
     // Use TestCoroutineDispatcher for controlling coroutines
-    private val testDispatcher = TestCoroutineDispatcher()
+    private val testDispatcher: TestDispatcher = StandardTestDispatcher()
+
 
     @Mock
     lateinit var dataRepository: DataRepository
@@ -49,23 +52,28 @@ class DataViewModelTest {
     @After
     fun tearDown() {
         Dispatchers.resetMain() // Reset main dispatcher
-        testDispatcher.cleanupTestCoroutines() // Clean up test coroutines
+
     }
 
     @Test
-    fun `fetchData should update liveData with data`() = runBlockingTest {
+    fun `fetchData should update liveData with data`() = runTest {
         // Arrange
-        val data = DataList(1,
+        val data = DataList(
+            1,
             "1",
             "accusamus beatae ad facilis cum similique qui sunt",
             "https://via.placeholder.com/600/92c952",
-            "https://via.placeholder.com/150/92c952")
+            "https://via.placeholder.com/150/92c952"
+        )
         val mockUser = Result.success(arrayListOf(data))
 
         `when`(dataRepository.data()).thenReturn(mockUser)
 
         // Act
         dataViewModel.data()
+
+        // Advance the dispatcher to make the coroutine run
+        advanceUntilIdle()
 
         // Assert
         verify(dataObserver).onChanged(mockUser) // Verifies LiveData was updated
